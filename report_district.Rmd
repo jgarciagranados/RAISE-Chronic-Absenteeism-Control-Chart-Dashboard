@@ -1,0 +1,229 @@
+---
+title: "Case Report"
+output: pdf_document
+header-includes: 
+- \pagenumbering{gobble}
+- \AtBeginDocument{\let\maketitle\relax}
+- \usepackage{pdfpages}
+params:
+  district: NA
+  df: NA
+---
+\includepdf[pages=1-2, pagecommand={}, scale = 0.9, linktodoc=true]{intro_page.pdf}
+```{r, fig.align="center", echo=FALSE, warning=FALSE, results='asis', message=FALSE}
+library(knitr)
+library(tidyverse)
+cat("#", "Report prepared for ", params$district, "\n")
+```
+
+**Step-by-Step Guide to Interpreting Your Control Charts**
+
+1. **Locate the Central Line:** Identify the centerline on the chart, which represents the average chronic absenteeism rate for the selected school or district. Use this as your baseline for understanding overall performance.
+2. **Spot Data Points Outside the Control Limits:** Look for any data points falling outside the upper or lower control limits (red dots). These points indicate potential special cause variation. Circle these points for further analysis.
+3. **Ask Investigative Questions:** Use the specific question prompts provided below each chart to explore the causes of unusual data points. 
+
+### Chart 1: Chronic Absenteeism from 2018 - 2024. Control limits frozen to pre pandemic levels to highlight the post pandemic change in rates. 
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+df.chart <- params$df %>% 
+        filter(
+          Reporting.Category == "All Students",
+          DASS != "Yes",
+          District.Name %in% params$district
+        ) %>% 
+        group_by(Academic.Year) %>% 
+        summarize(
+          enrollment = sum(ChronicAbsenteeismEligibleCumulativeEnrollment, na.rm=T),
+          ca = sum(ChronicAbsenteeismCount, na.rm=T)
+        ) 
+      
+ 
+chart_type <- if_else(mean(df.chart$enrollment, na.rm=T) > 5000, "pp", "p")
+     
+      
+      q1 <- qicharts2::qic(
+        x = factor(Academic.Year),
+        y = ca,
+        n = enrollment,
+        data = df.chart,
+        chart = chart_type,
+        freeze = 3,
+        title = "   ",
+        xlab = "School Year",
+        x.angle = 45,
+        point.size = 1,
+        show.labels = F
+      ) + geom_line()
+      q1
+```
+
+### Questions to consider:
+
+**Trends Over Time:** How have rates of chronic absenteeism evolved since the onset of the pandemic? Are there noticeable increases, decreases, or patterns that align with key events or interventions?
+
+**Progress Toward Recovery:** To what extent is your organization returning to pre-pandemic absenteeism levels? Are there specific time periods where progress has accelerated or stalled?
+
+**Impact on Learning:** How might the higher post-pandemic rates of chronic absenteeism be affecting student learning and engagement at your school or district? What challenges or opportunities does this present?
+
+\pagebreak
+
+### Chart 2:  Comparing Chronic Absenteeism in 2023–2024. Insights from  Districts in the Same County. (Comparison Districts randomly selected)
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+df.selected <- params$df %>% 
+  filter(
+    Reporting.Category == "All Students",
+    DASS != "Yes",
+    District.Name %in% params$district,
+    Academic.Year == "2023-24"
+  ) %>% 
+  group_by(District.Name) %>% 
+  summarize(
+    enrollment = sum(ChronicAbsenteeismEligibleCumulativeEnrollment, na.rm=T),
+    ca = sum(ChronicAbsenteeismCount, na.rm=T)
+  ) 
+
+selected_county <- params$df %>%
+  filter(
+    District.Name %in% params$district
+  ) %>%
+  group_by(District.Name) %>% 
+  summarize(
+    county = first(County.Name)
+  ) %>% 
+  select(county)
+
+df.comparison <- params$df %>% 
+  filter(
+    Reporting.Category == "All Students",
+    DASS != "Yes",
+    Academic.Year == "2023-24",
+    County.Name %in% selected_county
+  ) %>% 
+  group_by(District.Name) %>% 
+  summarize(
+    enrollment = sum(ChronicAbsenteeismEligibleCumulativeEnrollment, na.rm=T),
+    ca = sum(ChronicAbsenteeismCount, na.rm=T)
+  ) 
+  
+if(nrow(df.comparison) > 19) {
+  df.comparison <- sample_n(df.comparison, 20)
+}  
+
+df.chart <- rbind(df.selected, df.comparison)
+
+        q1 <- qicharts2::qic(
+            x=reorder(
+              District.Name, 
+              enrollment),
+            y = ca,
+            n= enrollment,
+            data = df.chart,
+            chart = 'pp',
+            title = "  ",
+            xlab = "District",
+            x.angle = 45,
+            point.size = 1,
+            show.labels = F
+        ) +
+        theme(plot.margin = margin(10,10,10,100))
+        q1
+```
+
+### Questions to consider:
+
+**Understanding Special Cause Variation:** What theories or factors might explain why some districts are outside the control limits? Consider differences in district policies, community engagement, transportation access, or other contextual variables.
+
+**Learning from Special Cause Variation:** Are there districts within this comparison group with notably lower or higher rates of chronic absenteeism? How could you learn more about the practices, interventions, or conditions that might contribute to these outcomes?
+
+\pagebreak
+
+### Chart 3: Comparing Chronic Absenteeism at your district in 2023–2024. Insights from Schools in the Same District. 
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+df <- params$df %>% 
+        filter(
+          Reporting.Category == "All Students",
+          DASS != "Yes",
+          Academic.Year == "2023-24"
+        )
+
+df.chart <- df %>%
+  filter(
+    District.Name %in% params$district
+  ) %>% 
+  mutate(
+    ca_pct = round(100*(ChronicAbsenteeismCount/ChronicAbsenteeismEligibleCumulativeEnrollment),2)
+  )
+      
+if(nrow(df.chart) > 20) {
+  df.chart <- sample_n(df.chart, 20)
+}      
+      
+      q1 <- qicharts2::qic(
+        x=School.Name,
+        y = ChronicAbsenteeismCount,
+        n = ChronicAbsenteeismEligibleCumulativeEnrollment,
+        data = df.chart,
+        chart = 'p',
+        title = "  ",
+        xlab = "School Year",
+        x.angle = 45,
+        point.size = 1,
+        show.labels = F
+      ) +
+        theme(plot.margin = margin(10,10,10,100))
+      q1
+```
+
+### Questions to consider:
+
+**Understanding Special Cause Variation:** What theories or factors might explain why some schools are outside the control limits? Consider differences in school policies, community engagement, transportation access, or other contextual variables.
+
+**Learning from Special Cause Variation:** Are there schools within this district with notably lower or higher rates of chronic absenteeism? How could you learn more about the practices, interventions, or conditions that might contribute to these outcomes? 
+
+\pagebreak
+
+### Chart 4: Comparing chronic absenteeism at your district in 2023–2024. A Focus on Specific Student Groups. 
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+df <- params$df %>% 
+        filter(
+          DASS != "Yes",
+          Reporting.Category != "Filipino"
+        )
+
+df.chart <- df %>%
+  filter(
+    District.Name %in% params$district
+  ) %>% 
+  group_by(District.Name, Academic.Year, Reporting.Category) %>% 
+  summarize(
+    enrollment = sum(ChronicAbsenteeismEligibleCumulativeEnrollment, na.rm=T),
+    ca = sum(ChronicAbsenteeismCount, na.rm=T)
+  ) 
+      
+chart_type <- if_else(mean(df.chart$enrollment, na.rm=T) > 5000, "pp", "p")
+
+      q1 <- qicharts2::qic(
+        x=factor(Academic.Year),
+        y = ca,
+        n = enrollment,
+        facet = ~Reporting.Category,
+        data = df.chart,
+        chart = chart_type,
+        freeze = 3,
+        title = "  ",
+        xlab = "School Year",
+        x.angle = 45,
+        point.size = 1,
+        show.labels = F
+      ) + geom_line()
+      q1
+```
+
+### Questions to consider:
+
+**Understanding Variations Among Student Groups:** What student groups experience chronic absenteeism rates outside the control limits? 
+
+**Learning with Students and Families:** For student groups with higher rates of absenteeism, what systemic or contextual barriers might be influencing these outcomes? How could you learn more about the practices, interventions, or conditions that might better support students and families more likely to be chronically absent in your system? 

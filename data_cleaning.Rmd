@@ -1,0 +1,82 @@
+---
+title: "cleaning"
+output: html_document
+date: "2024-09-25"
+---
+
+```{r}
+df <- read.csv("data/base_shiny_file.csv")
+
+df <- df %>% 
+  mutate(
+    ss_ntile = ntile(pct_ss, 10)
+  ) %>% 
+  mutate(
+    pct_ss_bucket = case_when(
+      ss_ntile == 1 ~ "0% - 10%",
+      ss_ntile == 2 ~ "10% - 20%",
+      ss_ntile == 3 ~ "20% - 30%",
+      ss_ntile == 4 ~ "30% - 40%",
+      ss_ntile == 5 ~ "40% - 50%",
+      ss_ntile == 6 ~ "50% - 60%",
+      ss_ntile == 7 ~ "60% - 70%",
+      ss_ntile == 8 ~ "70% - 80%",
+      ss_ntile == 9 ~ "80% - 90%",
+      ss_ntile == 10 ~ "90% - 100%",
+      T ~ "Not Available"
+    ),
+    pct_ss_bucket_actual = case_when(
+      pct_ss <= 0.1 ~ "0% - 10%",
+      pct_ss > 0.1 & pct_ss <= 0.2 ~ "10% - 20%",
+      pct_ss > 0.2 & pct_ss <= 0.3 ~ "20% - 30%",
+      pct_ss > 0.3 & pct_ss <= 0.4 ~ "30% - 40%",
+      pct_ss > 0.4 & pct_ss <= 0.5 ~ "40% - 50%",
+      pct_ss > 0.5 & pct_ss <= 0.6 ~ "50% - 60%",
+      pct_ss > 0.6 & pct_ss <= 0.7 ~ "60% - 70%",
+      pct_ss > 0.7 & pct_ss <= 0.8 ~ "70% - 80%",
+      pct_ss > 0.8 & pct_ss <= 0.9 ~ "80% - 90%",
+      pct_ss > 0.9 & pct_ss <= 1.0 ~ "90% - 100%",
+      T ~ "Not Available"
+    ),
+    num_ss_bucket = case_when(
+      total_enrollment <= 100 ~ "< 100",
+      total_enrollment > 100 & total_enrollment <= 200 ~ "100 - 200",
+      total_enrollment > 200 & total_enrollment <= 400 ~ "200 - 400",
+      total_enrollment > 400 & total_enrollment <= 600 ~ "400 - 600",
+      total_enrollment > 600 & total_enrollment <= 800 ~ "600 - 800",
+      total_enrollment > 800 & total_enrollment <= 1000 ~ "800 - 1000",
+      total_enrollment > 1000 & total_enrollment <= 1250 ~ "1000 - 1250",
+      total_enrollment > 1250 & total_enrollment <= 1500 ~ "1250 - 1500",
+      total_enrollment > 1500 & total_enrollment <= 1750 ~ "1500 - 1750",
+      total_enrollment > 1750 & total_enrollment <= 2000 ~ "1750 - 2000",
+      total_enrollment > 2000 & total_enrollment <= 2500 ~ "2000 - 2500",
+      total_enrollment > 2500 & total_enrollment <= 3000 ~ "2500 - 3000",
+      total_enrollment > 3000 ~ "3000+",
+      T ~ "Not Available"
+    ),
+    Reporting.Category = case_when(
+      Reporting.Category == "RB" ~ "Black/African American",
+      Reporting.Category == "RI" ~ "American Indian or Alaska Native",
+      Reporting.Category == "RA" ~ "Asian",
+      Reporting.Category == "RF" ~ "Filipino",
+      Reporting.Category == "RH" ~ "Hispanic or Latino",
+      Reporting.Category == "RP" ~ "Pacific Islander",
+      Reporting.Category == "RW" ~ "White",
+      Reporting.Category == "GM" ~ "Male",
+      Reporting.Category == "GF" ~ "Female",
+      Reporting.Category == "SE" ~ "English Learners",
+      Reporting.Category == "SD" ~ "Students with Disabilities",
+      Reporting.Category == "SS" ~ "Socioeconomically Disadvantaged",
+      Reporting.Category == "TA" ~ "All Students",
+      Reporting.Category %in% c("GRKN", "GRK", "GRTKKN") ~ "Kindergarten",
+      Reporting.Category == "SH" ~ "Unhoused",
+      T ~ "Exclude"
+    )
+  ) %>% filter(
+    Reporting.Category != "Exclude",
+    !(School.Name %in% c("Adult Transition", "Alternative", "Virtual Academy", "Independent Study", "Continuation"))
+  )
+
+write.csv(df, "data/working_shiny_file.csv", na="", row.names = F)
+```
+
